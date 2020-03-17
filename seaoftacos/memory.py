@@ -1,6 +1,7 @@
 import functools
 import struct
 import re
+import threading
 
 from .exceptions import *
 from .natives import *
@@ -26,6 +27,9 @@ def status_checked(func):
 class PatternTools(object):
     @staticmethod
     def check_pattern(data: bytes, mask: str, pattern: bytes):
+        if len(pattern) > len(data):
+            return False
+
         for i in range(len(pattern)):
             if mask[i] == '?':
                 continue
@@ -123,25 +127,20 @@ class Memory(object):
     def write_string(self, address: int, string: str):
         self.write_memory(address, string.encode() + b"\x00")
 
-    @status_checked
-    def pattern_scan(self, startAddress: int, size: int, pattern: str) -> int:
-        """ 
-            Scan for the given pattern in the given memory region.
-            Pattern example: 48 8B 05 ?? ?? ?? ?? 48 8B 88 ?? ?? ?? ?? 48 85 C9 74 06 48 8B 49 70
-        """
+    # PATTERN SCANNING STUFF
 
-        mask, pattern = PatternTools.compile_pattern(pattern)
-
+    def __pattern_scan(self, start_address: int, size: int, mask: str, pattern: bytes) -> list:
         if self.process.is_64bit:
             memory_info = MEMORY_BASIC_INFORMATION64()
         else:
             memory_info = MEMORY_BASIC_INFORMATION32()
 
         offset = 0
+        addresses = []
 
         while offset < size:
             if not Kernel32.VirtualQueryEx(self.__process.handle, LPCVOID(
-                    startAddress + offset), ctypes.byref(memory_info), ctypes.sizeof(memory_info)):
+                    start_address + offset), ctypes.byref(memory_info), ctypes.sizeof(memory_info)):
 
                 raise MemoryException(
                     "Failed to query process page information.")
@@ -157,15 +156,31 @@ class Memory(object):
                                   ).from_buffer(buffer, i)
 
                     if PatternTools.check_pattern(new_buffer, mask, pattern):
-                        del buffer
+                        addresses.append(memory_info.BaseAddress + i)
+                        del new_buffer
+                        break
 
-                        return memory_info.BaseAddress + i
-
+                    del new_buffer
                 del buffer
 
             offset += memory_info.RegionSize
 
-        raise PatternException("Pattern not found.")
+        if not addresses:
+            raise PatternException("Pattern not found.")
+
+        return addresses
+
+    @status_checked
+    def pattern_scan(self, start_address: int, size: int, pattern: str) -> list:
+        """ 
+            Scan for the given pattern in the given memory region.
+            Pattern example: 48 8B 05 ?? ?? ?? ?? 48 8B 88 ?? ?? ?? ?? 48 85 C9 74 06 48 8B 49 70
+        """
+
+        mask, pattern = PatternTools.compile_pattern(pattern)
+        return self.__pattern_scan(start_address, size, mask, pattern)
+
+    # ALLOCATION STUFF
 
     @status_checked
     def allocate(self, size: int, allocationType: AllocationType, protection: MemoryProtection) -> int:
