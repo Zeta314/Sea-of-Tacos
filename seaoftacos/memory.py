@@ -183,16 +183,24 @@ class Memory(object):
     # ALLOCATION STUFF
 
     @status_checked
-    def allocate(self, size: int, allocationType: AllocationType, protection: MemoryProtection) -> int:
+    def allocate(self, size: int, protection: MemoryProtection) -> int:
         """ Allocate memory into the given process """
 
         address = Kernel32.VirtualAllocEx(
-            self.__process.handle, NULL, size, allocationType, protection)
+            self.__process.handle, NULL, size, AllocationType.MEM_COMMIT, protection)
 
         if address is None or address == NULL:
             raise MemoryException("Failed to allocate memory.")
 
         return address
+
+    @status_checked
+    def protect(self, address: int, size:int, protection: MemoryProtection):
+        """ VirtualProtect wrapper """
+
+        old_protection = DWORD()
+        if not Kernel32.VirtualProtectEx(self.__process.handle, LPVOID(address), size, DWORD(protection), ctypes.pointer(old_protection)):
+            raise MemoryException("Failed to protect memory.")
 
     @status_checked
     def free(self, address: int):
