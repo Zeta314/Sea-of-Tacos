@@ -195,9 +195,27 @@ class Process(object):
     def create_thread(self, exec_address: int, parameters: int = NULL):
         """ Create a thread that executes memory at the given address """
 
-        handle = Kernel32.CreateRemoteThread(self.__handle, NULL, 0, exec_address, parameters, NULL, NULL)
+        handle = Kernel32.CreateRemoteThread(self.__handle, NULL, 0, LPCVOID(exec_address), parameters, NULL, NULL)
 
         if handle == NULL:
             raise ProcessException("Failed to create remote thread")
 
         return handle
+
+    # INJECTION STUFF
+
+    @status_checked
+    def inject_shellcode(self, shellcode: bytes, run: bool = False) -> int:
+        """ Inject the given shellcode and return the memory address """
+
+        memory_addr = self.memory.allocate(
+            len(shellcode), MemoryProtection.PAGE_EXECUTE_READWRITE)
+
+        self.memory.write_memory(memory_addr, shellcode)
+        self.memory.protect(memory_addr, len(shellcode),
+                            MemoryProtection.PAGE_EXECUTE)
+
+        if run:
+            self.create_thread(memory_addr)
+
+        return memory_addr
