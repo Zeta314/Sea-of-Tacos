@@ -4,7 +4,7 @@ long_description = open("README.md").read()
 
 setuptools.setup(
     name="seaoftacos-pkg-Zeta314", # Replace with your own username
-    version="0.0.1",
+    version="1.0a1",
     author="Zeta314",
     author_email="ale3152001@gmail.com",
     description="A process interaction package",
