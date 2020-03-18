@@ -56,19 +56,18 @@ class Process(object):
             raise ProcessException("Failed to get process bits.")
 
         if process_machine == ImageFile.IMAGE_FILE_MACHINE_UNKNOWN:
-            if (native_machine == ImageFile.IMAGE_FILE_MACHINE_IA64 or 
-                native_machine == ImageFile.IMAGE_FILE_MACHINE_AMD64 or 
-                native_machine == ImageFile.IMAGE_FILE_MACHINE_ARM64):
+            if (native_machine == ImageFile.IMAGE_FILE_MACHINE_IA64 or
+                native_machine == ImageFile.IMAGE_FILE_MACHINE_AMD64 or
+                    native_machine == ImageFile.IMAGE_FILE_MACHINE_ARM64):
 
                 return True
-            
-            if (native_machine == ImageFile.IMAGE_FILE_MACHINE_I386 or 
-                native_machine == ImageFile.IMAGE_FILE_MACHINE_ARM):
+
+            if (native_machine == ImageFile.IMAGE_FILE_MACHINE_I386 or
+                    native_machine == ImageFile.IMAGE_FILE_MACHINE_ARM):
                 return False
 
         else:
             return True
-
 
         return is64Bit
 
@@ -164,7 +163,6 @@ class Process(object):
 
         Kernel32.CloseHandle(snapshot)
         raise ProcessException("Module base address not found.")
-        
 
     @status_checked
     def module_size(self, name: str) -> int:
@@ -195,10 +193,11 @@ class Process(object):
     def create_thread(self, exec_address: int, parameters: int = NULL):
         """ Create a thread that executes memory at the given address """
 
-        handle = Kernel32.CreateRemoteThread(self.__handle, NULL, 0, LPCVOID(exec_address), parameters, NULL, NULL)
+        handle = Kernel32.CreateRemoteThread(self.__handle, NULL, 0, LPCVOID(
+            exec_address), LPVOID(parameters), NULL, NULL)
 
         if handle == NULL:
-            raise ProcessException("Failed to create remote thread")
+            raise ProcessException("Failed to create remote thread.")
 
         return handle
 
@@ -206,7 +205,7 @@ class Process(object):
 
     @status_checked
     def inject_shellcode(self, shellcode: bytes, run: bool = False) -> int:
-        """ Inject the given shellcode and return the memory address """
+        """ Inject the given shellcode and return the memory address it's allocated at """
 
         memory_addr = self.memory.allocate(
             len(shellcode), MemoryProtection.PAGE_EXECUTE_READWRITE)

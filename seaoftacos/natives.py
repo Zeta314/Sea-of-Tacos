@@ -1,6 +1,7 @@
 import ctypes
 from ctypes.wintypes import *
 
+DWORD64 = ctypes.c_uint64
 PVOID = ctypes.c_void_p
 ULONG_PTR = ctypes.POINTER(ULONG)
 SIZE_T = UINT
@@ -65,6 +66,7 @@ class MEMORY_BASIC_INFORMATION32(ctypes.Structure):
                 ('State', DWORD),
                 ('Protect', DWORD),
                 ('Type', DWORD)]
+
 
 class MEMORY_BASIC_INFORMATION64(ctypes.Structure):
     _fields_ = [('BaseAddress', ctypes.c_ulonglong),
@@ -174,7 +176,11 @@ class ImageFile(object):
 
 
 Kernel32 = ctypes.windll.kernel32
-Kernel32.VirtualAllocEx.restype = LPVOID # Wrong address given (the high part of the address was missing)
+# Wrong address given (the high part of the address was missing)
+Kernel32.VirtualAllocEx.restype = LPCVOID
+Kernel32.GetModuleHandleW.restype = HMODULE
+Kernel32.GetProcAddress.argtypes = (HMODULE, LPCSTR)
+Kernel32.GetProcAddress.restype = LPCVOID
 
 NTDLL = ctypes.WinDLL("ntdll.dll")
 PSAPI = ctypes.windll.psapi
