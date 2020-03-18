@@ -1,8 +1,6 @@
 import setuptools
 
-long_description = """
-It's just a package aimed to wrap around the windows API to interact with processes
-"""
+long_description = open("README.md").read()
 
 setuptools.setup(
     name="seaoftacos-pkg-Zeta314", # Replace with your own username
