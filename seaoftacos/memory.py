@@ -3,6 +3,7 @@ import struct
 import re
 import threading
 
+from .process import *
 from .exceptions import *
 from .natives import *
 
@@ -52,7 +53,7 @@ class PatternTools(object):
 
 
 class Memory(object):
-    def __init__(self, process):
+    def __init__(self, process: Process):
         self.__process = process
 
     @property

@@ -3,7 +3,6 @@ import struct
 
 from .natives import *
 from .exceptions import *
-from .memory import *
 
 
 def status_checked(func):
@@ -70,12 +69,6 @@ class Process(object):
             return True
 
         return is64Bit
-
-    @property
-    def memory(self):
-        """ Get the process memory object """
-
-        return Memory(self)
 
     @staticmethod
     def by_name(name: str):
