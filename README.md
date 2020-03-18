@@ -16,11 +16,12 @@ For more visit the [wiki](https://github.com/Zeta314/Sea-of-Tacos/wiki).
 
 ```python
 from seaoftacos.process import Process
+from seaoftacos.memory import Memory
 
 proc = Process.by_name("notepad.exe")
 proc.open()
 
-mem = proc.memory
+mem = Memory(proc)
 mem.write_int(0xdeadbeef, 1234)
 
 proc.close()
