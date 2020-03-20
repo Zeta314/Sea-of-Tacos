@@ -107,7 +107,10 @@ class Memory(object):
 
         buffer = ctypes.create_string_buffer(data)
 
-        if not Kernel32.WriteProcessMemory(self.__process.handle, LPVOID(address), buffer, len(data), NULL):
+        if not Kernel32.WriteProcessMemory(self.__process.handle,
+                                           LPVOID(address),
+                                           buffer,
+                                           len(data), NULL):
             raise MemoryException("Failed to write process memory.")
 
     def __write_type(self, address: int, format: str, data: bytes):
@@ -126,48 +129,30 @@ class Memory(object):
         self.__write_type(address, "q", data)
 
     def write_string(self, address: int, string: str):
-        self.write_memory(address, string.encode() + b"\x00")
+        self.__write_type(
+            address, f"{len(string) + 1}s", string.encode() + b'\x00')
 
     # PATTERN SCANNING STUFF
 
     def __pattern_scan(self, start_address: int, size: int, mask: str, pattern: bytes) -> list:
-        if self.process.is_64bit:
-            memory_info = MEMORY_BASIC_INFORMATION64()
-        else:
-            memory_info = MEMORY_BASIC_INFORMATION32()
-
-        offset = 0
         addresses = []
+        buffer = ctypes.create_string_buffer(size)
 
-        while offset < size:
-            if not Kernel32.VirtualQueryEx(self.__process.handle, LPCVOID(
-                    start_address + offset), ctypes.byref(memory_info), ctypes.sizeof(memory_info)):
+        if not Kernel32.ReadProcessMemory(self.__process.handle,
+                                          LPVOID(start_address),
+                                          buffer, SIZE_T(size), NULL):
+            raise MemoryException("Failed to read process memory.")
 
-                raise MemoryException(
-                    "Failed to query process page information.")
+        for i in range(size):
+            new_buffer = (CHAR * (size - i)).from_buffer(buffer, i)
 
-            if memory_info.State != MemoryState.MEM_FREE:
-                buffer = ctypes.create_string_buffer(memory_info.RegionSize)
-                if not Kernel32.ReadProcessMemory(self.__process.handle, LPVOID(memory_info.BaseAddress),
-                                                  buffer, memory_info.RegionSize, NULL):
-                    raise MemoryException("Failed to read process page.")
+            if PatternTools.check_pattern(new_buffer, mask, pattern):
+                addresses.append(start_address + i)
 
-                for i in range(memory_info.RegionSize):
-                    new_buffer = (CHAR * (memory_info.RegionSize - i)
-                                  ).from_buffer(buffer, i)
-
-                    if PatternTools.check_pattern(new_buffer, mask, pattern):
-                        addresses.append(memory_info.BaseAddress + i)
-                        del new_buffer
-                        break
-
-                    del new_buffer
-                del buffer
-
-            offset += memory_info.RegionSize
+            del new_buffer
 
         if not addresses:
-            raise PatternException("Pattern not found.")
+            raise MemoryException("Failed to find pattern.")
 
         return addresses
 
@@ -196,8 +181,8 @@ class Memory(object):
         return address
 
     @status_checked
-    def protect(self, address: int, size:int, protection: MemoryProtection):
-        """ VirtualProtect wrapper """
+    def protect(self, address: int, size: int, protection: MemoryProtection):
+        """ VirtualProtectEx wrapper """
 
         old_protection = DWORD()
         if not Kernel32.VirtualProtectEx(self.__process.handle, LPVOID(address), size, DWORD(protection), ctypes.pointer(old_protection)):
