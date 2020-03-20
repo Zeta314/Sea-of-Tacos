@@ -22,7 +22,8 @@ proc = Process.by_name("notepad.exe")
 proc.open()
 
 mem = Memory(proc)
-mem.write_int(0xdeadbeef, 1234)
+mem_ptr = mem.alloc(128)
+mem.write_string(mem_ptr, "Testing 1234")
 
 proc.close()
 
